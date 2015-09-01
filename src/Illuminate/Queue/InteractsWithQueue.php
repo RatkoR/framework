@@ -11,7 +11,7 @@ trait InteractsWithQueue
      *
      * @var \Illuminate\Contracts\Queue\Job
      */
-    protected $job;
+    public $job;
 
     /**
      * Delete the job from the queue.
