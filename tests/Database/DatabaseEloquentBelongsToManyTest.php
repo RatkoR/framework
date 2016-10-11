@@ -26,7 +26,9 @@ class DatabaseEloquentBelongsToManyTest extends PHPUnit_Framework_TestCase
         $relation->getQuery()->shouldReceive('addSelect')->once()->with(['roles.*', 'user_role.user_id as pivot_user_id', 'user_role.role_id as pivot_role_id'])->andReturn($relation->getQuery());
         $relation->getQuery()->shouldReceive('getModels')->once()->andReturn($models);
         $relation->getQuery()->shouldReceive('eagerLoadRelations')->once()->with($models)->andReturn($models);
-        $relation->getRelated()->shouldReceive('newCollection')->andReturnUsing(function ($array) { return new Collection($array); });
+        $relation->getRelated()->shouldReceive('newCollection')->andReturnUsing(function ($array) {
+            return new Collection($array);
+        });
         $relation->getQuery()->shouldReceive('getQuery')->once()->andReturn($baseBuilder);
         $results = $relation->get();
 
@@ -69,7 +71,9 @@ class DatabaseEloquentBelongsToManyTest extends PHPUnit_Framework_TestCase
         ])->andReturn($relation->getQuery());
         $relation->getQuery()->shouldReceive('getModels')->once()->andReturn($models);
         $relation->getQuery()->shouldReceive('eagerLoadRelations')->once()->with($models)->andReturn($models);
-        $relation->getRelated()->shouldReceive('newCollection')->andReturnUsing(function ($array) { return new Collection($array); });
+        $relation->getRelated()->shouldReceive('newCollection')->andReturnUsing(function ($array) {
+            return new Collection($array);
+        });
         $relation->getQuery()->shouldReceive('getQuery')->once()->andReturn($baseBuilder);
         $results = $relation->get();
     }
@@ -92,7 +96,9 @@ class DatabaseEloquentBelongsToManyTest extends PHPUnit_Framework_TestCase
         $model3 = new EloquentBelongsToManyModelStub;
         $model3->id = 3;
 
-        $relation->getRelated()->shouldReceive('newCollection')->andReturnUsing(function ($array) { return new Collection($array); });
+        $relation->getRelated()->shouldReceive('newCollection')->andReturnUsing(function ($array) {
+            return new Collection($array);
+        });
         $models = $relation->match([$model1, $model2, $model3], new Collection([$result1, $result2, $result3]), 'foo');
 
         $this->assertEquals(1, $models[0]->foo[0]->pivot->user_id);
@@ -106,7 +112,9 @@ class DatabaseEloquentBelongsToManyTest extends PHPUnit_Framework_TestCase
     public function testRelationIsProperlyInitialized()
     {
         $relation = $this->getRelation();
-        $relation->getRelated()->shouldReceive('newCollection')->andReturnUsing(function ($array = []) { return new Collection($array); });
+        $relation->getRelated()->shouldReceive('newCollection')->andReturnUsing(function ($array = []) {
+            return new Collection($array);
+        });
         $model = m::mock('Illuminate\Database\Eloquent\Model');
         $model->shouldReceive('setRelation')->once()->with('foo', m::type('Illuminate\Database\Eloquent\Collection'));
         $models = $relation->initRelation([$model], 'foo');
@@ -267,7 +275,7 @@ class DatabaseEloquentBelongsToManyTest extends PHPUnit_Framework_TestCase
         $relation->shouldReceive('get')->once()->andReturn(new Illuminate\Database\Eloquent\Collection([new StdClass]));
         $relation->shouldReceive('take')->with(1)->once()->andReturn($relation);
 
-        $this->assertTrue($relation->first() instanceof StdClass);
+        $this->assertInstanceOf(StdClass::class, $relation->first());
     }
 
     public function testFindMethod()
@@ -279,7 +287,7 @@ class DatabaseEloquentBelongsToManyTest extends PHPUnit_Framework_TestCase
         $related = $relation->getRelated();
         $related->shouldReceive('getQualifiedKeyName')->once()->andReturn('roles.id');
 
-        $this->assertTrue($relation->find('foo') instanceof StdClass);
+        $this->assertInstanceOf(StdClass::class, $relation->find('foo'));
     }
 
     public function testFindManyMethod()
@@ -294,7 +302,7 @@ class DatabaseEloquentBelongsToManyTest extends PHPUnit_Framework_TestCase
         $result = $relation->findMany(['foo', 'bar']);
 
         $this->assertEquals(2, count($result));
-        $this->assertTrue($result->first() instanceof StdClass);
+        $this->assertInstanceOf(StdClass::class, $result->first());
     }
 
     public function testCreateMethodCreatesNewModelAndInsertsAttachmentRecord()
@@ -314,7 +322,7 @@ class DatabaseEloquentBelongsToManyTest extends PHPUnit_Framework_TestCase
         $relation->expects($this->once())->method('find')->with('foo')->will($this->returnValue($model = m::mock('StdClass')));
         $relation->getRelated()->shouldReceive('newInstance')->never();
 
-        $this->assertTrue($relation->findOrNew('foo') instanceof StdClass);
+        $this->assertInstanceOf(StdClass::class, $relation->findOrNew('foo'));
     }
 
     public function testFindOrNewMethodReturnsNewModel()
@@ -323,7 +331,7 @@ class DatabaseEloquentBelongsToManyTest extends PHPUnit_Framework_TestCase
         $relation->expects($this->once())->method('find')->with('foo')->will($this->returnValue(null));
         $relation->getRelated()->shouldReceive('newInstance')->once()->andReturn($model = m::mock('StdClass'));
 
-        $this->assertTrue($relation->findOrNew('foo') instanceof StdClass);
+        $this->assertInstanceOf(StdClass::class, $relation->findOrNew('foo'));
     }
 
     public function testFirstOrNewMethodFindsFirstModel()
@@ -333,7 +341,7 @@ class DatabaseEloquentBelongsToManyTest extends PHPUnit_Framework_TestCase
         $relation->getQuery()->shouldReceive('first')->once()->andReturn($model = m::mock('StdClass'));
         $relation->getRelated()->shouldReceive('newInstance')->never();
 
-        $this->assertTrue($relation->firstOrNew(['foo']) instanceof StdClass);
+        $this->assertInstanceOf(StdClass::class, $relation->firstOrNew(['foo']));
     }
 
     public function testFirstOrNewMethodReturnsNewModel()
@@ -343,7 +351,7 @@ class DatabaseEloquentBelongsToManyTest extends PHPUnit_Framework_TestCase
         $relation->getQuery()->shouldReceive('first')->once()->andReturn(null);
         $relation->getRelated()->shouldReceive('newInstance')->once()->andReturn($model = m::mock('StdClass'));
 
-        $this->assertTrue($relation->firstOrNew(['foo']) instanceof StdClass);
+        $this->assertInstanceOf(StdClass::class, $relation->firstOrNew(['foo']));
     }
 
     public function testFirstOrCreateMethodFindsFirstModel()
@@ -353,7 +361,7 @@ class DatabaseEloquentBelongsToManyTest extends PHPUnit_Framework_TestCase
         $relation->getQuery()->shouldReceive('first')->once()->andReturn($model = m::mock('StdClass'));
         $relation->expects($this->never())->method('create')->with(['foo'])->will($this->returnValue(null));
 
-        $this->assertTrue($relation->firstOrCreate(['foo']) instanceof StdClass);
+        $this->assertInstanceOf(StdClass::class, $relation->firstOrCreate(['foo']));
     }
 
     public function testFirstOrCreateMethodReturnsNewModel()
@@ -363,7 +371,7 @@ class DatabaseEloquentBelongsToManyTest extends PHPUnit_Framework_TestCase
         $relation->getQuery()->shouldReceive('first')->once()->andReturn(null);
         $relation->expects($this->once())->method('create')->with(['foo'])->will($this->returnValue($model = m::mock('StdClass')));
 
-        $this->assertTrue($relation->firstOrCreate(['foo']) instanceof StdClass);
+        $this->assertInstanceOf(StdClass::class, $relation->firstOrCreate(['foo']));
     }
 
     public function testUpdateOrCreateMethodFindsFirstModelAndUpdates()
@@ -375,7 +383,7 @@ class DatabaseEloquentBelongsToManyTest extends PHPUnit_Framework_TestCase
         $model->shouldReceive('save')->once();
         $relation->expects($this->never())->method('create')->with(['foo'])->will($this->returnValue(null));
 
-        $this->assertTrue($relation->updateOrCreate(['foo']) instanceof StdClass);
+        $this->assertInstanceOf(StdClass::class, $relation->updateOrCreate(['foo']));
     }
 
     public function testUpdateOrCreateMethodReturnsNewModel()
@@ -385,7 +393,7 @@ class DatabaseEloquentBelongsToManyTest extends PHPUnit_Framework_TestCase
         $relation->getQuery()->shouldReceive('first')->once()->andReturn(null);
         $relation->expects($this->once())->method('create')->with(['foo'])->will($this->returnValue($model = m::mock('StdClass')));
 
-        $this->assertTrue($relation->updateOrCreate(['bar'], ['foo']) instanceof StdClass);
+        $this->assertInstanceOf(StdClass::class, $relation->updateOrCreate(['bar'], ['foo']));
     }
 
     /**
@@ -400,19 +408,19 @@ class DatabaseEloquentBelongsToManyTest extends PHPUnit_Framework_TestCase
         $relation->getQuery()->shouldReceive('getQuery')->andReturn($mockQueryBuilder = m::mock('StdClass'));
         $mockQueryBuilder->shouldReceive('newQuery')->once()->andReturn($query);
         $query->shouldReceive('lists')->once()->with('role_id')->andReturn([1, 2, 3]);
-        $relation->expects($this->once())->method('attach')->with($this->equalTo(4), $this->equalTo([]), $this->equalTo(false));
+        $relation->expects($this->once())->method('attach')->with($this->equalTo('x'), $this->equalTo([]), $this->equalTo(false));
         $relation->expects($this->once())->method('detach')->with($this->equalTo([1]));
         $relation->getRelated()->shouldReceive('touches')->andReturn(false);
         $relation->getParent()->shouldReceive('touches')->andReturn(false);
 
-        $this->assertEquals(['attached' => [4], 'detached' => [1], 'updated' => []], $relation->sync($list));
+        $this->assertEquals(['attached' => ['x'], 'detached' => [1], 'updated' => []], $relation->sync($list));
     }
 
     public function syncMethodListProvider()
     {
         return [
-            [[2, 3, 4]],
-            [['2', '3', '4']],
+            [[2, 3, 'x']],
+            [['2', '3', 'x']],
         ];
     }
 
@@ -563,6 +571,7 @@ class EloquentBelongsToManyModelStub extends Illuminate\Database\Eloquent\Model
 class EloquentBelongsToManyModelPivotStub extends Illuminate\Database\Eloquent\Model
 {
     public $pivot;
+
     public function __construct()
     {
         $this->pivot = new EloquentBelongsToManyPivotStub;

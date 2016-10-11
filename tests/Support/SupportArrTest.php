@@ -44,7 +44,9 @@ class SupportArrTest extends PHPUnit_Framework_TestCase
     public function testLast()
     {
         $array = [100, 200, 300];
-        $last = Arr::last($array, function () { return true; });
+        $last = Arr::last($array, function () {
+            return true;
+        });
         $this->assertEquals(300, $last);
     }
 
@@ -97,6 +99,36 @@ class SupportArrTest extends PHPUnit_Framework_TestCase
         $array = Arr::pluck($array, 'developer.name');
 
         $this->assertEquals(['Taylor', 'Abigail'], $array);
+    }
+
+    public function testPluckWithKeys()
+    {
+        $array = [
+            ['name' => 'Taylor', 'role' => 'developer'],
+            ['name' => 'Abigail', 'role' => 'developer'],
+        ];
+
+        $test1 = Arr::pluck($array, 'role', 'name');
+        $test2 = Arr::pluck($array, null, 'name');
+
+        $this->assertEquals([
+            'Taylor' => 'developer',
+            'Abigail' => 'developer',
+        ], $test1);
+
+        $this->assertEquals([
+            'Taylor' => ['name' => 'Taylor', 'role' => 'developer'],
+            'Abigail' => ['name' => 'Abigail', 'role' => 'developer'],
+        ], $test2);
+    }
+
+    public function testPrepend()
+    {
+        $array = Arr::prepend(['one', 'two', 'three', 'four'], 'zero');
+        $this->assertEquals(['zero', 'one', 'two', 'three', 'four'], $array);
+
+        $array = Arr::prepend(['one' => 1, 'two' => 2], 0, 'zero');
+        $this->assertEquals(['zero' => 0, 'one' => 1, 'two' => 2], $array);
     }
 
     public function testPull()
@@ -203,6 +235,14 @@ class SupportArrTest extends PHPUnit_Framework_TestCase
 
     public function testForget()
     {
+        $array = ['products' => ['desk' => ['price' => 100]]];
+        Arr::forget($array, null);
+        $this->assertEquals(['products' => ['desk' => ['price' => 100]]], $array);
+
+        $array = ['products' => ['desk' => ['price' => 100]]];
+        Arr::forget($array, []);
+        $this->assertEquals(['products' => ['desk' => ['price' => 100]]], $array);
+
         $array = ['products' => ['desk' => ['price' => 100]]];
         Arr::forget($array, 'products.desk');
         $this->assertEquals(['products' => []], $array);

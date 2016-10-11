@@ -81,8 +81,12 @@ class DatabaseEloquentCollectionTest extends PHPUnit_Framework_TestCase
         $mockModel2->shouldReceive('getKey')->andReturn(2);
         $c = new Collection([$mockModel1, $mockModel2]);
 
-        $this->assertTrue($c->contains(function ($k, $m) { return $m->getKey() < 2; }));
-        $this->assertFalse($c->contains(function ($k, $m) { return $m->getKey() > 2; }));
+        $this->assertTrue($c->contains(function ($k, $m) {
+            return $m->getKey() < 2;
+        }));
+        $this->assertFalse($c->contains(function ($k, $m) {
+            return $m->getKey() > 2;
+        }));
     }
 
     public function testFindMethodFindsModelById()
@@ -221,4 +225,17 @@ class DatabaseEloquentCollectionTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(new Collection([$one, $three]), $c->except(2));
         $this->assertEquals(new Collection([$one]), $c->except([2, 3]));
     }
+
+    public function testWithHiddenSetsHiddenOnEntireCollection()
+    {
+        $c = new Collection([new TestEloquentCollectionModel]);
+        $c = $c->withHidden(['hidden']);
+
+        $this->assertEquals([], $c[0]->getHidden());
+    }
+}
+
+class TestEloquentCollectionModel extends Illuminate\Database\Eloquent\Model
+{
+    protected $hidden = ['hidden'];
 }

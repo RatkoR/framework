@@ -2,6 +2,8 @@
 
 use Illuminate\Auth\Access\Gate;
 use Illuminate\Container\Container;
+use Illuminate\Auth\Access\Response;
+use Illuminate\Auth\Access\HandlesAuthorization;
 
 class GateTest extends PHPUnit_Framework_TestCase
 {
@@ -17,11 +19,68 @@ class GateTest extends PHPUnit_Framework_TestCase
     {
         $gate = $this->getBasicGate();
 
-        $gate->define('foo', function ($user) { return true; });
-        $gate->define('bar', function ($user) { return false; });
+        $gate->define('foo', function ($user) {
+            return true;
+        });
+        $gate->define('bar', function ($user) {
+            return false;
+        });
 
         $this->assertTrue($gate->check('foo'));
         $this->assertFalse($gate->check('bar'));
+    }
+
+    public function test_before_callbacks_can_override_result_if_necessary()
+    {
+        $gate = $this->getBasicGate();
+
+        $gate->define('foo', function ($user) {
+            return true;
+        });
+        $gate->before(function ($user, $ability) {
+            $this->assertEquals('foo', $ability);
+
+            return false;
+        });
+
+        $this->assertFalse($gate->check('foo'));
+    }
+
+    public function test_before_callbacks_dont_interrupt_gate_check_if_no_value_is_returned()
+    {
+        $gate = $this->getBasicGate();
+
+        $gate->define('foo', function ($user) {
+            return true;
+        });
+        $gate->before(function () {
+        });
+
+        $this->assertTrue($gate->check('foo'));
+    }
+
+    public function test_after_callbacks_are_called_with_result()
+    {
+        $gate = $this->getBasicGate();
+
+        $gate->define('foo', function ($user) {
+            return true;
+        });
+        $gate->define('bar', function ($user) {
+            return false;
+        });
+
+        $gate->after(function ($user, $ability, $result) {
+            if ($ability == 'foo') {
+                $this->assertTrue($result, 'After callback on `foo` should receive true as result');
+            } else {
+                $this->assertFalse($result, 'After callback on `bar` or `missing` should receive false as result');
+            }
+        });
+
+        $this->assertTrue($gate->check('foo'));
+        $this->assertFalse($gate->check('bar'));
+        $this->assertFalse($gate->check('missing'));
     }
 
     public function test_current_user_that_is_on_gate_always_injected_into_closure_callbacks()
@@ -87,11 +146,49 @@ class GateTest extends PHPUnit_Framework_TestCase
         $this->assertTrue($gate->check('update', new AccessGateTestDummy));
     }
 
+    public function test_policy_converts_dash_to_camel()
+    {
+        $gate = $this->getBasicGate();
+
+        $gate->policy(AccessGateTestDummy::class, AccessGateTestPolicy::class);
+
+        $this->assertTrue($gate->check('update-dash', new AccessGateTestDummy));
+    }
+
+    public function test_policy_default_to_false_if_method_does_not_exist()
+    {
+        $gate = $this->getBasicGate();
+
+        $gate->policy(AccessGateTestDummy::class, AccessGateTestPolicy::class);
+
+        $this->assertFalse($gate->check('nonexistent_method', new AccessGateTestDummy));
+    }
+
+    public function test_policy_classes_can_be_defined_to_handle_checks_for_given_class_name()
+    {
+        $gate = $this->getBasicGate(true);
+
+        $gate->policy(AccessGateTestDummy::class, AccessGateTestPolicy::class);
+
+        $this->assertTrue($gate->check('create', AccessGateTestDummy::class));
+    }
+
+    public function test_policies_may_have_before_methods_to_override_checks()
+    {
+        $gate = $this->getBasicGate();
+
+        $gate->policy(AccessGateTestDummy::class, AccessGateTestPolicyWithBefore::class);
+
+        $this->assertTrue($gate->check('update', new AccessGateTestDummy));
+    }
+
     public function test_policies_always_override_closures_with_same_name()
     {
         $gate = $this->getBasicGate();
 
-        $gate->define('update', function () { $this->fail(); });
+        $gate->define('update', function () {
+            $this->fail();
+        });
 
         $gate->policy(AccessGateTestDummy::class, AccessGateTestPolicy::class);
 
@@ -112,9 +209,49 @@ class GateTest extends PHPUnit_Framework_TestCase
         $this->assertTrue($gate->forUser((object) ['id' => 2])->check('foo'));
     }
 
-    protected function getBasicGate()
+    /**
+     * @expectedException \Illuminate\Auth\Access\UnauthorizedException
+     */
+    public function test_authorize_throws_unauthorized_exception()
     {
-        return new Gate(new Container, function () { return (object) ['id' => 1]; });
+        $gate = $this->getBasicGate();
+
+        $gate->policy(AccessGateTestDummy::class, AccessGateTestPolicy::class);
+
+        $gate->authorize('create', new AccessGateTestDummy);
+    }
+
+    public function test_authorize_returns_allowed_response()
+    {
+        $gate = $this->getBasicGate(true);
+
+        $gate->policy(AccessGateTestDummy::class, AccessGateTestPolicy::class);
+
+        $check = $gate->check('create', new AccessGateTestDummy);
+        $response = $gate->authorize('create', new AccessGateTestDummy);
+
+        $this->assertInstanceOf(Response::class, $response);
+        $this->assertNull($response->message());
+        $this->assertTrue($check);
+    }
+
+    public function test_authorize_returns_an_allowed_response_for_a_truthy_return()
+    {
+        $gate = $this->getBasicGate();
+
+        $gate->policy(AccessGateTestDummy::class, AccessGateTestPolicy::class);
+
+        $response = $gate->authorize('update', new AccessGateTestDummy);
+
+        $this->assertInstanceOf(Response::class, $response);
+        $this->assertNull($response->message());
+    }
+
+    protected function getBasicGate($isAdmin = false)
+    {
+        return new Gate(new Container, function () use ($isAdmin) {
+            return (object) ['id' => 1, 'isAdmin' => $isAdmin];
+        });
     }
 }
 
@@ -133,8 +270,33 @@ class AccessGateTestDummy
 
 class AccessGateTestPolicy
 {
+    use HandlesAuthorization;
+
+    public function create($user)
+    {
+        return $user->isAdmin ? $this->allow() : $this->deny('You are not an admin.');
+    }
+
     public function update($user, AccessGateTestDummy $dummy)
     {
+        return ! $user->isAdmin;
+    }
+
+    public function updateDash($user, AccessGateTestDummy $dummy)
+    {
         return $user instanceof StdClass;
+    }
+}
+
+class AccessGateTestPolicyWithBefore
+{
+    public function before($user, $ability)
+    {
+        return true;
+    }
+
+    public function update($user, AccessGateTestDummy $dummy)
+    {
+        return false;
     }
 }
